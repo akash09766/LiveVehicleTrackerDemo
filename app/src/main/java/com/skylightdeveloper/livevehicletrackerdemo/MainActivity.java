@@ -2,26 +2,19 @@ package com.skylightdeveloper.livevehicletrackerdemo;
 
 import android.content.pm.PackageManager;
 import android.location.Location;
-import android.os.Build;
-import android.os.Handler;
-import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.content.ContextCompat;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.animation.Interpolator;
-import android.view.animation.LinearInterpolator;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.Marker;
-import com.google.android.gms.maps.model.MarkerOptions;
 
 import io.nlopez.smartlocation.OnLocationUpdatedListener;
 import io.nlopez.smartlocation.SmartLocation;
@@ -32,7 +25,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     private GoogleMap mMap;
     private boolean mLocationPermissionGranted;
     private final int PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 113;
-    private Location mPrevLocation;
+//    private Location mPrevLocation;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,7 +34,6 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         setContentView(R.layout.activity_main);
 
         initMap();
-
     }
 
     private void initMap() {
@@ -56,14 +48,12 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         mMap = googleMap;
         Log.d(TAG, "onMapReady: ");
         if (android.os.Build.VERSION.SDK_INT > 23) {
-            /*Ask Dungerous Permissions here*/
-
             getLocationPermission();
-
         } else {
             startLocationUpdates();
         }
     }
+
 
     @Override
     public void onRequestPermissionsResult(int requestCode,
@@ -85,6 +75,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     private void startLocationUpdates() {
         SmartLocation.with(this).location()
                 .start(this);
+        mMap.setMyLocationEnabled(true);
     }
 
     private void getLocationPermission() {
@@ -107,9 +98,20 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onLocationUpdated(Location location) {
 
-//        Log.d(TAG, "onLocationUpdated: " + location.getLatitude() + " / " + location.getLongitude());
+        Log.d(TAG, "onLocationUpdated: " + location.getLatitude() + " / " + location.getLongitude());
 
-        if (mPrevLocation == null) {
+
+        CameraPosition position = new CameraPosition.Builder()
+                .target(new LatLng(location.getLatitude(),location.getLongitude()))
+                .zoom(17.0f).build();
+
+        mMap.animateCamera(CameraUpdateFactory.newCameraPosition(position));
+
+
+
+
+
+        /*if (mPrevLocation == null) {
 
             final Marker marker = mMap.addMarker(new MarkerOptions()
                     .position(new LatLng(location.getLatitude(), location.getLongitude()))
@@ -119,9 +121,17 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         } else {
             animateMarker(new LatLng(mPrevLocation.getLatitude(), mPrevLocation.getLongitude()), new LatLng(location.getLatitude(), location.getLongitude()), true);
         }
-        mPrevLocation = location;
+        mPrevLocation = location;*/
     }
 
+
+
+
+
+
+
+
+/*
     public void animateMarker(final LatLng startPosition, final LatLng toPosition,
                               final boolean hideMarker) {
         Log.d(TAG, "animateMarker: prev : "+startPosition.latitude+"/"+startPosition.longitude);
@@ -166,5 +176,5 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                 }
             }
         });
-    }
+    }*/
 }
