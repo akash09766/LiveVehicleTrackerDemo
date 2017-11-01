@@ -1,8 +1,10 @@
 package com.skylightdeveloper.livevehicletrackerdemo.activity;
 
+import android.animation.ValueAnimator;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Location;
+import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
@@ -10,6 +12,7 @@ import android.support.v4.content.ContextCompat;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.view.animation.LinearInterpolator;
 import android.widget.TextView;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -19,8 +22,10 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.skylightdeveloper.livevehicletrackerdemo.config.LContants;
 import com.skylightdeveloper.livevehicletrackerdemo.config.LiveLocationConfig;
 import com.skylightdeveloper.livevehicletrackerdemo.model.Data;
 import com.skylightdeveloper.livevehicletrackerdemo.network.NetworkManager;
@@ -45,6 +50,8 @@ import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
+import static com.skylightdeveloper.livevehicletrackerdemo.model.Share.lat;
+
 public class LocationActivity extends FragmentActivity implements OnMapReadyCallback, OnLocationUpdatedListener {
 
     private static final String TAG = LocationActivity.class.getSimpleName();
@@ -55,6 +62,11 @@ public class LocationActivity extends FragmentActivity implements OnMapReadyCall
     //    private Location mPrevLocation;
     private StartEndLocationData data;
     private TextView mDetailsTv;
+        private Marker marker;
+    private Handler handler;
+    private int index, next;
+    PolylineOptions lineOptions = null;
+    ArrayList<LatLng> points;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -116,7 +128,7 @@ public class LocationActivity extends FragmentActivity implements OnMapReadyCall
         String startingLatLng = data.getmStartingLatLng().latitude + "," + data.getmStartingLatLng().longitude;
         String endingLatLng = data.getmEndingLatLng().latitude + "," + data.getmEndingLatLng().longitude;
 
-        Call<Data> call = networkManager.getRoutes("driving","less_driving",startingLatLng, endingLatLng, false, getString(R.string.google_maps_key));
+        Call<Data> call = networkManager.getRoutes(LContants.TRANSIT_MODE, LContants.TRANSIT_ROUTING_PREFERENCE, startingLatLng, endingLatLng, false, getString(R.string.google_maps_key));
 
 
         call.enqueue(new Callback<Data>() {
@@ -142,7 +154,6 @@ public class LocationActivity extends FragmentActivity implements OnMapReadyCall
         });
     }
 
-
     private void parseData(Data data) {
 
 
@@ -164,7 +175,7 @@ public class LocationActivity extends FragmentActivity implements OnMapReadyCall
 //                        polyline = (String)((JSONObject)((JSONObject)jSteps.get(k)).get("polyline")).get("points");
                         polyline = data.routes.get(i).legs.get(j).steps.get(k).polyline.points;
                         List<LatLng> list = decodePoly(polyline);
-
+//                        polyLineList.addAll(list);
                         /** Traversing all points */
                         for (int l = 0; l < list.size(); l++) {
                             HashMap<String, String> hm = new HashMap<>();
@@ -181,9 +192,6 @@ public class LocationActivity extends FragmentActivity implements OnMapReadyCall
             Log.e(TAG, "parse: Exception : " + e.getMessage());
         }
 
-
-        ArrayList<LatLng> points;
-        PolylineOptions lineOptions = null;
 
         // Traversing through all the routes
         for (int i = 0; i < routes.size(); i++) {
@@ -219,8 +227,95 @@ public class LocationActivity extends FragmentActivity implements OnMapReadyCall
         } else {
             Log.d("onPostExecute", "without Polylines drawn");
         }
+
+
+       /* marker = mMap.addMarker(new MarkerOptions().position(this.data.getmStartingLatLng())
+                .flat(true)
+                .icon(BitmapDescriptorFactory.fromResource(R.mipmap.car_map)));
+        handler = new Handler();
+        index = -1;
+        next = 1;
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (index < polyLineList.size() - 1) {
+                    index++;
+                    next = index + 1;
+                }
+                if (index < polyLineList.size() - 1) {
+                    startPosition = polyLineList.get(index);
+                    endPosition = polyLineList.get(next);
+                }
+                ValueAnimator valueAnimator = ValueAnimator.ofFloat(0, 1);
+                valueAnimator.setDuration(3000);
+                valueAnimator.setInterpolator(new LinearInterpolator());
+                valueAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+                    @Override
+                    public void onAnimationUpdate(ValueAnimator valueAnimator) {
+                        v = valueAnimator.getAnimatedFraction();
+                        lng = v * endPosition.longitude + (1 - v)
+                                * startPosition.longitude;
+                        lat = v * endPosition.latitude + (1 - v)
+                                * startPosition.latitude;
+                        LatLng newPos = new LatLng(lat, lng);
+                        marker.setPosition(newPos);
+                        marker.setAnchor(0.5f, 0.5f);
+                        marker.setRotation((float)getBearing(startPosition, newPos));
+                        mMap.moveCamera(CameraUpdateFactory
+                                .newCameraPosition
+                                        (new CameraPosition.Builder()
+                                                .target(newPos)
+                                                .zoom(15.5f)
+                                                .build()));
+                    }
+                });
+                valueAnimator.start();
+                handler.postDelayed(this, 3000);
+            }
+        }, 3000);*/
     }
 
+    /*private float v;
+    private double lat, lng;
+    private LatLng startPosition, endPosition;
+    List<LatLng> polyLineList = new ArrayList<>();
+
+    private double getBearing(LatLng latLng1, LatLng latLng2) {
+
+        double PI = 3.14159;
+        double lat1 = latLng1.latitude * PI / 180;
+        double long1 = latLng1.longitude * PI / 180;
+        double lat2 = latLng2.latitude * PI / 180;
+        double long2 = latLng2.longitude * PI / 180;
+
+        double dLon = (long2 - long1);
+
+        double y = Math.sin(dLon) * Math.cos(lat2);
+        double x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1)
+                * Math.cos(lat2) * Math.cos(dLon);
+
+        double brng = Math.atan2(y, x);
+
+        brng = Math.toDegrees(brng);
+        brng = (brng + 360) % 360;
+
+        return brng;
+    }*/
+
+    /* private float getBearing(LatLng begin, LatLng end) {
+        double lat = Math.abs(begin.latitude - end.latitude);
+        double lng = Math.abs(begin.longitude - end.longitude);
+
+        if (begin.latitude < end.latitude && begin.longitude < end.longitude)
+            return (float) (Math.toDegrees(Math.atan(lng / lat)));
+        else if (begin.latitude >= end.latitude && begin.longitude < end.longitude)
+            return (float) ((90 - Math.toDegrees(Math.atan(lng / lat))) + 90);
+        else if (begin.latitude >= end.latitude && begin.longitude >= end.longitude)
+            return (float) (Math.toDegrees(Math.atan(lng / lat)) + 180);
+        else if (begin.latitude < end.latitude && begin.longitude >= end.longitude)
+            return (float) ((90 - Math.toDegrees(Math.atan(lng / lat))) + 270);
+        return -1;
+    }*/
     private void setDataToViews(Data data) {
         mDetailsTv.setVisibility(View.VISIBLE);
         mDetailsTv.setText(data.routes.get(0).legs.get(0).duration.text + " (" + data.routes.get(0).legs.get(0).distance.text + ")");
