@@ -116,7 +116,7 @@ public class LocationActivity extends FragmentActivity implements OnMapReadyCall
         String startingLatLng = data.getmStartingLatLng().latitude + "," + data.getmStartingLatLng().longitude;
         String endingLatLng = data.getmEndingLatLng().latitude + "," + data.getmEndingLatLng().longitude;
 
-        Call<Data> call = networkManager.getRoutes(startingLatLng, endingLatLng, false, getString(R.string.google_maps_key));
+        Call<Data> call = networkManager.getRoutes("driving","less_driving",startingLatLng, endingLatLng, false, getString(R.string.google_maps_key));
 
 
         call.enqueue(new Callback<Data>() {
