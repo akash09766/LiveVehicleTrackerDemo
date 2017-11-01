@@ -1,8 +1,74 @@
 <?xml version="1.0" encoding="utf-8"?>
-<fragment xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:id="@+id/map"
-    tools:context=".MainActivity"
-    android:name="com.google.android.gms.maps.SupportMapFragment" />
+    android:orientation="vertical">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <EditText
+            android:id="@+id/start_location_et_id"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="15dp"
+            android:hint="@string/start_location_et_hint"
+            android:paddingRight="35dp" />
+
+        <ImageView
+            android:id="@+id/pick_location_starting_iv_id"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true"
+            android:layout_marginRight="20dp"
+            android:contentDescription="@string/pick_starting_location_content_desc"
+            android:paddingBottom="10dp"
+            android:src="@android:drawable/ic_menu_mylocation" />
+
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <EditText
+            android:id="@+id/end_location_et_id"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="15dp"
+            android:hint="@string/end_location_et_hint"
+            android:paddingRight="35dp" />
+
+        <ImageView
+            android:id="@+id/pick_location_ending_iv_id"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true"
+            android:layout_marginRight="20dp"
+            android:contentDescription="@string/pick_ending_location_content_desc"
+            android:paddingBottom="10dp"
+            android:src="@android:drawable/ic_menu_mylocation" />
+    </RelativeLayout>
+
+    <Button
+        android:id="@+id/start_nav_but_id"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_margin="15dp"
+        android:text="@string/start_nav_but_text"
+        android:textAllCaps="false" />
+
+    <Button
+        android:id="@+id/start_nav_but_google_map_id"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_margin="15dp"
+        android:text="@string/start_nav_google_map_but_text"
+        android:textAllCaps="false" />
+
+</LinearLayout>

@@ -3,4 +3,12 @@
     <color name="colorPrimary">#3F51B5</color>
     <color name="colorPrimaryDark">#303F9F</color>
     <color name="colorAccent">#FF4081</color>
+
+    <color name="trans_black">#a7000000</color>
+    <color name="white">#ffffff</color>
+    <color name="light_grey">#9e9b9b</color>
+    <color name="light_gray_02">#f4f3f3</color>
+    <color name="green_kind_of">#5eb94d</color>
+    <color name="black">#000000</color>
+    <color name="et_text_color">#FF424242</color>
 </resources>
