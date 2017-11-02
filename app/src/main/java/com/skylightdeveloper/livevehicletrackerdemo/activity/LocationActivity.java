@@ -1,18 +1,24 @@
 package com.skylightdeveloper.livevehicletrackerdemo.activity;
 
-import android.animation.ValueAnimator;
+import android.Manifest;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Location;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Handler;
+import android.provider.Settings;
 import android.support.annotation.NonNull;
+import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.content.ContextCompat;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
-import android.view.animation.LinearInterpolator;
 import android.widget.TextView;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -31,6 +37,7 @@ import com.skylightdeveloper.livevehicletrackerdemo.model.Data;
 import com.skylightdeveloper.livevehicletrackerdemo.network.NetworkManager;
 import com.skylightdeveloper.livevehicletrackerdemo.R;
 import com.skylightdeveloper.livevehicletrackerdemo.model.StartEndLocationData;
+import com.skylightdeveloper.livevehicletrackerdemo.preferences.AppPreferences;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -62,11 +69,9 @@ public class LocationActivity extends FragmentActivity implements OnMapReadyCall
     //    private Location mPrevLocation;
     private StartEndLocationData data;
     private TextView mDetailsTv;
-        private Marker marker;
-    private Handler handler;
-    private int index, next;
     PolylineOptions lineOptions = null;
     ArrayList<LatLng> points;
+    private static final int REQUEST_LOCATION_PERMISSION = 113;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -228,7 +233,6 @@ public class LocationActivity extends FragmentActivity implements OnMapReadyCall
             Log.d("onPostExecute", "without Polylines drawn");
         }
 
-
        /* marker = mMap.addMarker(new MarkerOptions().position(this.data.getmStartingLatLng())
                 .flat(true)
                 .icon(BitmapDescriptorFactory.fromResource(R.mipmap.car_map)));
@@ -278,7 +282,6 @@ public class LocationActivity extends FragmentActivity implements OnMapReadyCall
     /*private float v;
     private double lat, lng;
     private LatLng startPosition, endPosition;
-    List<LatLng> polyLineList = new ArrayList<>();
 
     private double getBearing(LatLng latLng1, LatLng latLng2) {
 
@@ -316,6 +319,7 @@ public class LocationActivity extends FragmentActivity implements OnMapReadyCall
             return (float) ((90 - Math.toDegrees(Math.atan(lng / lat))) + 270);
         return -1;
     }*/
+
     private void setDataToViews(Data data) {
         mDetailsTv.setVisibility(View.VISIBLE);
         mDetailsTv.setText(data.routes.get(0).legs.get(0).duration.text + " (" + data.routes.get(0).legs.get(0).distance.text + ")");
@@ -393,6 +397,11 @@ public class LocationActivity extends FragmentActivity implements OnMapReadyCall
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     mLocationPermissionGranted = true;
                     startLocationUpdates();
+                }else {
+                    AppPreferences appPreferences = new AppPreferences(this);
+                    showLongSnackBar(getString(R.string.app_permission_denied_user_clarification_msg));
+
+                    appPreferences.setLocationPermissionDeniedStatus(true);
                 }
             }
         }
@@ -401,7 +410,9 @@ public class LocationActivity extends FragmentActivity implements OnMapReadyCall
     private void startLocationUpdates() {
         SmartLocation.with(this).location()
                 .start(this);
-        mMap.setMyLocationEnabled(true);
+        if(requestLocationPermission()){
+            mMap.setMyLocationEnabled(true);
+        }
     }
 
     private void getLocationPermission() {
@@ -421,12 +432,59 @@ public class LocationActivity extends FragmentActivity implements OnMapReadyCall
         }
     }
 
+    private boolean requestLocationPermission() {
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            return true;
+        }
+
+        if (PackageManager.PERMISSION_GRANTED == ContextCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_FINE_LOCATION)) {
+            return true;
+        } else {
+
+            AppPreferences appPreferences = new AppPreferences(this);
+
+            if (!appPreferences.getLocationaPermissionDeniedStatus()) {
+
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                        REQUEST_LOCATION_PERMISSION);
+
+            } else if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+                    Manifest.permission.ACCESS_FINE_LOCATION)) {
+
+
+                showLocationDialogOK(getString(R.string.android_location_permissions_denied_chat),
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                switch (which) {
+                                    case DialogInterface.BUTTON_POSITIVE:
+
+
+                                        ActivityCompat.requestPermissions(LocationActivity.this,
+                                                new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                                                REQUEST_LOCATION_PERMISSION);
+
+                                        break;
+                                    case DialogInterface.BUTTON_NEGATIVE:
+                                        // proceed with logic by disabling the related features or quit the app.
+                                        break;
+                                }
+                            }
+                        });
+            } else {
+                showSettingSnackBar("You need to enable Location permission from Settings ");
+            }
+        }
+        return false;
+    }
 
     @Override
     public void onLocationUpdated(Location location) {
 
         Log.d(TAG, "onLocationUpdated: " + location.getLatitude() + " / " + location.getLongitude());
-
 
         if (mLocation == null) {
 
@@ -640,4 +698,47 @@ public class LocationActivity extends FragmentActivity implements OnMapReadyCall
             }
         });
     }*/
+
+    private void showLocationDialogOK(String message, DialogInterface.OnClickListener okListener) {
+        new AlertDialog.Builder(this)
+                .setMessage(message)
+                .setPositiveButton("OK", okListener)
+                .setNegativeButton("Cancel", okListener)
+                .create()
+                .show();
+    }
+
+    private void showSettingSnackBar(String message) {
+
+        Snackbar snackbar = Snackbar
+                .make(findViewById(android.R.id.content), message, Snackbar.LENGTH_LONG)
+                .setAction(getString(R.string.action_settings), new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        launchAppSettingScreen();
+                    }
+                });
+
+        snackbar.setActionTextColor(ContextCompat.getColor(this, R.color.dark_sky));
+
+        View sbView = snackbar.getView();
+        TextView textView = (TextView) sbView.findViewById(android.support.design.R.id.snackbar_text);
+        textView.setTextColor(Color.WHITE);
+        textView.setMaxLines(4);
+        snackbar.show();
+    }
+
+    private void launchAppSettingScreen() {
+        Intent intent = new Intent();
+        intent.setAction(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+        Uri uri = Uri.fromParts("package", getPackageName(), null);
+        intent.setData(uri);
+        startActivity(intent);
+    }
+
+    public void showLongSnackBar(String message) {
+        Snackbar snackbar = Snackbar
+                .make(findViewById(android.R.id.content), message, Snackbar.LENGTH_LONG);
+        snackbar.show();
+    }
 }

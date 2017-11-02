@@ -11,4 +11,6 @@
     <color name="green_kind_of">#5eb94d</color>
     <color name="black">#000000</color>
     <color name="et_text_color">#FF424242</color>
+
+    <color name="dark_sky">#18A0BA</color>
 </resources>
