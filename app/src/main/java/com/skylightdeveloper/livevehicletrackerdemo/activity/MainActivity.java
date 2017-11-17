@@ -2,10 +2,12 @@ package com.skylightdeveloper.livevehicletrackerdemo.activity;
 
 import android.Manifest;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.location.Criteria;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -14,7 +16,6 @@ import android.support.annotation.Nullable;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
-import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -36,12 +37,15 @@ import com.skylightdeveloper.livevehicletrackerdemo.config.LContants;
 import com.skylightdeveloper.livevehicletrackerdemo.model.StartEndLocationData;
 import com.skylightdeveloper.livevehicletrackerdemo.model.UserChoiceLocation;
 import com.skylightdeveloper.livevehicletrackerdemo.preferences.AppPreferences;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 
 /**
  * Created by akash.wangalwar on 31/10/17.
  */
 
-public class MainActivity extends BaseActivity implements View.OnClickListener {
+public class MainActivity extends BaseActivity implements View.OnClickListener, LocationListener {
 
     private EditText mStartingAddrEt, mEndingAddrEt;
     private Button mStartNavBtn;
@@ -63,6 +67,12 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
     private static final int START_NAVIGATION_CLICKED = 331;
     private int WHICH_BUTTON_CLICKED = 0;
     private Button mCustomStartNavBut;
+    double longitude;
+    double latitude;
+
+    private LocationManager locationManager;
+    private String provider;
+
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -72,7 +82,73 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
 
         setIdsToViews();
         setIdsListenersViews();
-        requestLocationPermission();
+        //  requestLocationPermission();
+        if (requestLocationPermission())
+            getCurrentLocation();
+    }
+
+    private void getCurrentLocation() {
+
+        // Get the location manager
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        // Define the criteria how to select the locatioin provider -> use
+        // default
+        Criteria criteria = new Criteria();
+        provider = locationManager.getBestProvider(criteria, false);
+        Location location = locationManager.getLastKnownLocation(provider);
+        Log.d(TAG, "getCurrentLocation: provider : "+provider);
+
+        // Initialize the location fields
+        if (location != null) {
+            System.out.println("Provider " + provider + " has been selected.");
+            onLocationChanged(location);
+        } else {
+            Log.e(TAG, "getCurrentLocation: Location not available");
+        }
+
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || PackageManager.PERMISSION_GRANTED == ContextCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_FINE_LOCATION)){
+            locationManager.requestLocationUpdates(provider, 400, 1, this);
+        }
+
+    }
+
+    /* Remove the locationlistener updates when Activity is paused */
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if(locationManager != null)
+        locationManager.removeUpdates(this);
+    }
+
+    @Override
+    public void onLocationChanged(Location location) {
+        Log.d(TAG, "onLocationChanged: lat : "+location.getLatitude()+"    long : "+location.getLongitude());
+    }
+
+    @Override
+    public void onStatusChanged(String provider, int status, Bundle extras) {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void onProviderEnabled(String provider) {
+        Toast.makeText(this, "Enabled new provider " + provider,
+                Toast.LENGTH_SHORT).show();
+
+    }
+
+    @Override
+    public void onProviderDisabled(String provider) {
+        Toast.makeText(this, "Disabled provider " + provider,
+                Toast.LENGTH_SHORT).show();
     }
 
     private void setIdsListenersViews() {
@@ -178,7 +254,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
             return false;
         }
 
-        if(mStartingLatLng == null){
+        if (mStartingLatLng == null) {
             showToast(getString(R.string.reselect_start_location_et_error));
             return false;
         }
@@ -358,6 +434,8 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
 
                     } else if (WHICH_BUTTON_CLICKED == START_NAVIGATION_CLICKED) {
                         mStartNavBtn.performClick();
+                    }else if (WHICH_BUTTON_CLICKED == 0) {
+                        getCurrentLocation();
                     } else {
                         Log.e(TAG, "onRequestPermissionsResult: INVALID CONDITION WILL NEVER OCCUR ");
                     }
@@ -384,7 +462,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
     private void showSettingSnackBar(String message) {
 
         Snackbar snackbar = Snackbar
-                .make(findViewById(android.R.id.content), message, Snackbar.LENGTH_LONG)
+                .make(findViewById(android.R.id.content), message, Snackbar.LENGTH_INDEFINITE)
                 .setAction(getString(R.string.action_settings), new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
