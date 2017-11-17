@@ -62,6 +62,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
     private static final int USER_CHOICE_ENDING_LOCATION_CLICKED = 321;
     private static final int START_NAVIGATION_CLICKED = 331;
     private int WHICH_BUTTON_CLICKED = 0;
+    private Button mCustomStartNavBut;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -85,6 +86,8 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
         mPickStartingLocationIv.setOnClickListener(this);
         mPickEndingLocationIv.setOnClickListener(this);
 
+        mCustomStartNavBut.setOnClickListener(this);
+
         mStartingAddrEt.setFocusable(false);
         mStartingAddrEt.setClickable(true);
         mEndingAddrEt.setFocusable(false);
@@ -92,11 +95,14 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
     }
 
     private void setIdsToViews() {
+
         mStartingAddrEt = (EditText) findViewById(R.id.start_location_et_id);
         mEndingAddrEt = (EditText) findViewById(R.id.end_location_et_id);
 
         mStartNavBtn = (Button) findViewById(R.id.start_nav_but_id);
         mStartNavGoogleMapBtn = (Button) findViewById(R.id.start_nav_but_google_map_id);
+
+        mCustomStartNavBut = (Button) findViewById(R.id.custom_start_nav_but_id);
 
         mPickStartingLocationIv = (ImageView) findViewById(R.id.pick_location_starting_iv_id);
         mPickEndingLocationIv = (ImageView) findViewById(R.id.pick_location_ending_iv_id);

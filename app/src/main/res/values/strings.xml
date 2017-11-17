@@ -6,6 +6,7 @@
 
     <string name="start_nav_but_text">Start Navigation</string>
     <string name="start_nav_google_map_but_text">Start Navigation using Google Map</string>
+    <string name="custom_start_nav_but_text">Start Navigation from my current location</string>
 
     <string name="start_location_et_error">Please enter starting location</string>
     <string name="end_location_et_error">Please enter ending location</string>

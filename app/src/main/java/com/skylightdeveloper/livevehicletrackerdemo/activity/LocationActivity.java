@@ -1,6 +1,7 @@
 package com.skylightdeveloper.livevehicletrackerdemo.activity;
 
 import android.Manifest;
+import android.animation.Animator;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -10,6 +11,7 @@ import android.location.Location;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
+import android.os.SystemClock;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
@@ -19,8 +21,12 @@ import android.support.v4.content.ContextCompat;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.view.animation.Interpolator;
+import android.view.animation.LinearInterpolator;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -30,7 +36,13 @@ import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.maps.android.data.Feature;
+import com.google.maps.android.data.kml.KmlContainer;
+import com.google.maps.android.data.kml.KmlLayer;
+import com.google.maps.android.data.kml.KmlPlacemark;
+import com.skylightdeveloper.livevehicletrackerdemo.animation.MapAnimator;
 import com.skylightdeveloper.livevehicletrackerdemo.config.LContants;
 import com.skylightdeveloper.livevehicletrackerdemo.config.LiveLocationConfig;
 import com.skylightdeveloper.livevehicletrackerdemo.model.Data;
@@ -42,7 +54,9 @@ import com.skylightdeveloper.livevehicletrackerdemo.preferences.AppPreferences;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.xmlpull.v1.XmlPullParserException;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -56,8 +70,7 @@ import retrofit2.Callback;
 import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
-
-import static com.skylightdeveloper.livevehicletrackerdemo.model.Share.lat;
+//19.20269,83.94333
 
 public class LocationActivity extends FragmentActivity implements OnMapReadyCallback, OnLocationUpdatedListener {
 
@@ -71,7 +84,9 @@ public class LocationActivity extends FragmentActivity implements OnMapReadyCall
     private TextView mDetailsTv;
     PolylineOptions lineOptions = null;
     ArrayList<LatLng> points;
+    ArrayList<LatLng> polyLineList = new ArrayList<>();
     private static final int REQUEST_LOCATION_PERMISSION = 113;
+    private KmlLayer layer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -85,6 +100,7 @@ public class LocationActivity extends FragmentActivity implements OnMapReadyCall
         data = (StartEndLocationData) getIntent().getParcelableExtra(MainActivity.LOCATION_INTENT_FILTER);
 
         Log.d(TAG, "onCreate: start " + data.getmStartingLatLng().latitude + " " + data.getmStartingLatLng().longitude + "   end " + data.getmEndingLatLng().latitude + "  " + data.getmEndingLatLng().longitude);
+
     }
 
     private void setIdsToViews() {
@@ -112,7 +128,34 @@ public class LocationActivity extends FragmentActivity implements OnMapReadyCall
         drawPolyline();
 
         googleMap.getUiSettings().setZoomControlsEnabled(true);
+
+        try {
+            layer = new KmlLayer(this.mMap, R.raw.bhimpurshift, getApplicationContext());
+            layer.addLayerToMap();
+        } catch (XmlPullParserException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            Log.e(TAG, "onMapReady: Exception : " + e.getMessage());
+        }
+
+
+        for (KmlContainer containers : layer.getContainers()) {
+            Log.d(TAG, "onMapReady: KmlContainer : "+containers.getContainerId());
+        }
+
+        for (KmlPlacemark placemark : layer.getPlacemarks()) {
+            Log.d(TAG, "onMapReady: KmlPlacemark : "+placemark.getId());
+        }
+
+        // Set a listener for geometry clicked events.
+        layer.setOnFeatureClickListener(new KmlLayer.OnFeatureClickListener() {
+            @Override
+            public void onFeatureClick(Feature feature) {
+                Log.d(TAG ,"onMapReady"+ "Feature clicked: " + feature.getId());
+            }
+        });
     }
+
 
     private void drawPolyline() {
 
@@ -277,6 +320,8 @@ public class LocationActivity extends FragmentActivity implements OnMapReadyCall
                 handler.postDelayed(this, 3000);
             }
         }, 3000);*/
+
+//       startAnim(polyLineList);
     }
 
     /*private float v;
@@ -319,6 +364,14 @@ public class LocationActivity extends FragmentActivity implements OnMapReadyCall
             return (float) ((90 - Math.toDegrees(Math.atan(lng / lat))) + 270);
         return -1;
     }*/
+
+    private void startAnim(List<LatLng> route) {
+        if (mMap != null) {
+            MapAnimator.getInstance().animateRoute(mMap, route);
+        } else {
+            Toast.makeText(getApplicationContext(), "Map not ready", Toast.LENGTH_LONG).show();
+        }
+    }
 
     private void setDataToViews(Data data) {
         mDetailsTv.setVisibility(View.VISIBLE);
@@ -397,7 +450,7 @@ public class LocationActivity extends FragmentActivity implements OnMapReadyCall
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     mLocationPermissionGranted = true;
                     startLocationUpdates();
-                }else {
+                } else {
                     AppPreferences appPreferences = new AppPreferences(this);
                     showLongSnackBar(getString(R.string.app_permission_denied_user_clarification_msg));
 
@@ -410,7 +463,7 @@ public class LocationActivity extends FragmentActivity implements OnMapReadyCall
     private void startLocationUpdates() {
         SmartLocation.with(this).location()
                 .start(this);
-        if(requestLocationPermission()){
+        if (requestLocationPermission()) {
             mMap.setMyLocationEnabled(true);
         }
     }
@@ -500,8 +553,61 @@ public class LocationActivity extends FragmentActivity implements OnMapReadyCall
         }
         Log.d(TAG, "onLocationUpdated: Speed : " + getSpeed(location, mLocation) * 1.609344);
         mLocation = location;
+/*
+        if (mPositionMarker == null) {
+
+            mPositionMarker = mMap.addMarker(new MarkerOptions()
+                    .flat(true)
+                    .icon(BitmapDescriptorFactory
+                            .fromResource(R.mipmap.car_map))
+                    .anchor(0.5f, 0.5f)
+                    .position(
+                            new LatLng(location.getLatitude(), location
+                                    .getLongitude())));
+        }
+
+        animateMarker(mPositionMarker, location); // Helper method for smooth
+        // animation
+
+        mMap.animateCamera(CameraUpdateFactory.newLatLng(new LatLng(location
+                .getLatitude(), location.getLongitude())));*/
 
     }
+
+/*    public void animateMarker(final Marker marker, final Location location) { //  this solution is some what okay okay but must be improved
+        final Handler handler = new Handler();
+        final long start = SystemClock.uptimeMillis();
+        final LatLng startLatLng = marker.getPosition();
+        final double startRotation = marker.getRotation();
+        final long duration = 500;
+
+        final Interpolator interpolator = new LinearInterpolator();
+
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                long elapsed = SystemClock.uptimeMillis() - start;
+                float t = interpolator.getInterpolation((float) elapsed
+                        / duration);
+
+                double lng = t * location.getLongitude() + (1 - t)
+                        * startLatLng.longitude;
+                double lat = t * location.getLatitude() + (1 - t)
+                        * startLatLng.latitude;
+
+                float rotation = (float) (t * location.getBearing() + (1 - t)
+                        * startRotation);
+
+                marker.setPosition(new LatLng(lat, lng));
+                marker.setRotation(rotation);
+
+                if (t < 1.0) {
+                    // Post again 16ms later.
+                    handler.postDelayed(this, 16);
+                }
+            }
+        });
+    }*/
 
     public static double getSpeed(Location currentLocation, Location oldLocation) {
 
@@ -636,68 +742,6 @@ public class LocationActivity extends FragmentActivity implements OnMapReadyCall
             return poly;
         }
     }
-
-
-   /* private void startNavigation01() {
-        Intent intent = new Intent(android.content.Intent.ACTION_VIEW,
-                Uri.parse("http://maps.google.com/maps?daddr=19.228290,72.977003"));
-        startActivity(intent);
-    }
-
-    private void startNavigation() {
-        Intent intent = new Intent(android.content.Intent.ACTION_VIEW,
-                Uri.parse("http://maps.google.com/maps?saddr=19.161494,73.001781&daddr=19.228290,72.977003"));
-        startActivity(intent);
-    }*/
-
-
-
-/*
-    public void animateMarker(final LatLng startPosition, final LatLng toPosition,
-                              final boolean hideMarker) {
-        Log.d(TAG, "animateMarker: prev : "+startPosition.latitude+"/"+startPosition.longitude);
-        Log.d(TAG, "animateMarker: curr : "+toPosition.latitude+"/"+toPosition.longitude);
-
-
-        final Marker marker = mMap.addMarker(new MarkerOptions()
-                .position(startPosition)
-//                .title(mCarParcelableListCurrentLation.get(position).mCarName)
-//                .snippet(mCarParcelableListCurrentLation.get(position).mAddress)
-                .icon(BitmapDescriptorFactory.fromResource(R.mipmap.car_map)));
-
-
-        final Handler handler = new Handler();
-        final long start = SystemClock.uptimeMillis();
-
-        final long duration = 1000;
-        final Interpolator interpolator = new LinearInterpolator();
-
-        handler.post(new Runnable() {
-            @Override
-            public void run() {
-                long elapsed = SystemClock.uptimeMillis() - start;
-                float t = interpolator.getInterpolation((float) elapsed
-                        / duration);
-                double lng = t * toPosition.longitude + (1 - t)
-                        * startPosition.longitude;
-                double lat = t * toPosition.latitude + (1 - t)
-                        * startPosition.latitude;
-
-                marker.setPosition(new LatLng(lat, lng));
-
-                if (t < 1.0) {
-                    // Post again 16ms later.
-                    handler.postDelayed(this, 16);
-                } else {
-                    if (hideMarker) {
-                        marker.setVisible(false);
-                    } else {
-                        marker.setVisible(true);
-                    }
-                }
-            }
-        });
-    }*/
 
     private void showLocationDialogOK(String message, DialogInterface.OnClickListener okListener) {
         new AlertDialog.Builder(this)
